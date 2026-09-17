@@ -126,33 +126,37 @@
   .fam-body .part-row{margin:6px 12px;}
 
   .part-row{
-    display:flex; align-items:center; gap:12px;
-    margin:6px 16px; padding:12px 14px; border-radius:16px;
-    background:var(--paper); border:1px solid var(--line); cursor:pointer;
+    display:flex; flex-direction:column; gap:0;
+    margin:6px 16px; padding:12px 14px; border-radius:16px; box-sizing:border-box;
+    background:var(--paper); border:1px solid var(--line); cursor:pointer; overflow:hidden;
   }
   .part-row.checked{background:var(--green-tint); border-color:#CFE3C8;}
+  .part-row-top{display:flex; align-items:flex-start; gap:10px; width:100%; box-sizing:border-box;}
   .checkbox{
-    width:24px;height:24px;border-radius:8px;border:2px solid #C4D2DD;background:#fff;
-    flex-shrink:0; display:flex;align-items:center;justify-content:center; font-size:14px; color:transparent; font-weight:700;
+    width:22px;height:22px;border-radius:7px;border:2px solid #C4D2DD;background:#fff;
+    flex-shrink:0; display:flex;align-items:center;justify-content:center; font-size:13px; color:transparent; font-weight:700;
+    margin-top:1px;
   }
   .checkbox.checked{background:var(--green); border-color:var(--green); color:#fff;}
-  .part-info{flex:1; min-width:0;}
-  .part-info .name{font-size:14px; font-weight:500;}
-  .part-info .ref{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted); margin-top:3px;}
-  .part-price{font-family:'IBM Plex Mono', monospace; font-size:12.5px; font-weight:600; color:var(--ink); flex-shrink:0; text-align:right; min-width:54px;}
-  .part-price.missing{color:#B23A3A; font-style:italic; font-weight:400; font-size:11px;}
+  .part-info{flex:1 1 auto; min-width:0;}
+  .part-info .name{font-size:14px; font-weight:500; line-height:1.3; word-break:break-word;}
+  .part-price{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; font-weight:600; color:var(--ink);
+    flex-shrink:0; text-align:right; white-space:nowrap; padding-top:1px;
+  }
+  .part-price.missing{color:#B23A3A; font-style:italic; font-weight:400; font-size:10.5px; white-space:normal; max-width:70px; text-align:right;}
+  .qty-stepper-row{display:flex; justify-content:flex-end; width:100%; margin-top:10px; box-sizing:border-box;}
   .qty-stepper{
-    display:flex; align-items:center; gap:0; background:#fff; border:1px solid var(--green);
-    border-radius:20px; flex-shrink:0; margin-left:8px;
+    display:flex; align-items:center; background:#fff; border:1px solid var(--green);
+    border-radius:20px; flex-shrink:0; overflow:hidden;
   }
   .qty-stepper button{
-    width:26px; height:26px; border:none; background:transparent; color:var(--green);
-    font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    width:30px; height:28px; border:none; background:transparent; color:var(--green);
+    font-size:17px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
   }
   .qty-stepper .qtyval{
-    min-width:20px; text-align:center; font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:13px; color:var(--ink);
+    min-width:22px; text-align:center; font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:13px; color:var(--ink);
   }
-  .part-row-top{display:flex; align-items:center; gap:12px; width:100%;}
   .recap-item{display:flex; justify-content:space-between; gap:10px;}
   .recap-item .rp{font-family:'IBM Plex Mono', monospace; color:var(--muted); flex-shrink:0;}
   .recap-total{display:flex; justify-content:space-between; font-family:'Poppins',sans-serif; font-weight:700; font-size:15px; color:var(--blue-deep); padding:14px 0 4px; border-top:2px solid var(--blue-deep); margin-top:10px;}
@@ -515,9 +519,8 @@ function renderPartRow(item, quantMap, defaultQty){
     '<div class="checkbox ' + (isChecked ? 'checked' : '') + '">' + (isChecked ? '&#10003;' : '') + '</div>' +
     '<div class="part-info">' +
       '<div class="name">' + item.designation + '</div>' +
-      '<div class="ref">' + item.famille + '</div>' +
     '</div>' +
-    '<div class="part-price' + (priceText ? '' : ' missing') + '">' + (priceText || 'Prix a definir') + '</div>';
+    '<div class="part-price' + (priceText ? '' : ' missing') + '">' + (priceText || 'A definir') + '</div>';
   top.onclick = function(){
     if(quantMap.hasOwnProperty(item.designation)){
       delete quantMap[item.designation];
@@ -529,10 +532,10 @@ function renderPartRow(item, quantMap, defaultQty){
   row.appendChild(top);
 
   if(isChecked){
+    var stepperRow = document.createElement('div');
+    stepperRow.className = 'qty-stepper-row';
     var stepper = document.createElement('div');
     stepper.className = 'qty-stepper';
-    stepper.style.marginTop = '8px';
-    stepper.style.marginLeft = '36px';
     stepper.innerHTML =
       '<button class="dec">-</button>' +
       '<span class="qtyval">' + quantMap[item.designation] + '</span>' +
@@ -547,7 +550,8 @@ function renderPartRow(item, quantMap, defaultQty){
       quantMap[item.designation] = quantMap[item.designation] + 1;
       buildSelectionScreen();
     };
-    row.appendChild(stepper);
+    stepperRow.appendChild(stepper);
+    row.appendChild(stepperRow);
   }
 
   return row;
