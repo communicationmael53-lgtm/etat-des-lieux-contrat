@@ -119,6 +119,39 @@
     color:var(--muted); font-size:13px; cursor:pointer; padding:6px;
   }
   .search-results-hint{padding:2px 20px 8px; font-size:12px; color:var(--muted);}
+  .custom-row{
+    display:flex; align-items:flex-start; gap:10px;
+    margin:6px 16px; padding:12px 14px; border-radius:16px; box-sizing:border-box;
+    background:var(--green-tint); border:1px solid #CFE3C8;
+  }
+  .custom-row .part-info{flex:1; min-width:0;}
+  .custom-row .name{font-size:14px; font-weight:500;}
+  .custom-row .ref{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted); margin-top:3px;}
+  .custom-remove{
+    width:24px; height:24px; border-radius:8px; border:none; background:#fff; color:#B23A3A;
+    font-size:14px; font-weight:700; flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .custom-add-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin:10px 16px; padding:13px; border-radius:14px; border:1.5px dashed #B7C4CE;
+    background:transparent; color:var(--blue); font-family:'Poppins',sans-serif; font-weight:600; font-size:13.5px;
+    cursor:pointer; width:calc(100% - 32px);
+  }
+  .custom-form{
+    margin:10px 16px; padding:14px; border-radius:16px; background:var(--blue-tint); border:1px solid #DCE9F2;
+  }
+  .custom-form input{
+    width:100%; border:none; background:#fff; border-radius:12px; padding:11px 12px;
+    font-size:14px; font-family:'Inter',sans-serif; color:var(--ink); box-sizing:border-box; margin-bottom:8px;
+  }
+  .custom-form .row2{display:flex; gap:8px;}
+  .custom-form .row2 input{flex:1;}
+  .custom-form-actions{display:flex; gap:8px; margin-top:4px;}
+  .custom-form-actions button{
+    flex:1; border:none; border-radius:12px; padding:11px; font-family:'Poppins',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer;
+  }
+  .custom-form-actions .cancel{background:#fff; color:var(--muted);}
+  .custom-form-actions .confirm{background:var(--blue-deep); color:#fff;}
   .search-flat-item{padding:0;}
   .robot-tab{
     flex-shrink:0; border:none; border-radius:20px; padding:9px 16px;
@@ -262,7 +295,7 @@
         <label>Modèle de robot</label>
         <div class="toggle-row" id="robotToggleRow">
           <button class="toggle-btn" data-robot="V300">V300</button>
-          <button class="toggle-btn" data-robot="V Classic">Classic</button>
+          <button class="toggle-btn" data-robot="V Classic">V Classic</button>
         </div>
       </div>
       <div class="field">
@@ -347,7 +380,9 @@ const state = {
   coches: {},            // { designation: quantite }
   cochesSite: {},         // { designation: quantite }
   familyOpen: {},
-  searchQuery: ''
+  searchQuery: '',
+  customItems: [],        // [{ designation, reference, prix, qty }]
+  showCustomForm: false
 };
 
 function normalizeSearch(s){
@@ -402,6 +437,7 @@ function totalCoche(){
   var total = 0;
   Object.keys(state.coches).forEach(function(k){ total += state.coches[k]; });
   Object.keys(state.cochesSite).forEach(function(k){ total += state.cochesSite[k]; });
+  state.customItems.forEach(function(it){ total += it.qty; });
   return total;
 }
 
@@ -454,6 +490,8 @@ document.getElementById('btnCommencer').onclick = function(){
   state.cochesSite = {};
   state.familyOpen = {};
   state.searchQuery = '';
+  state.customItems = [];
+  state.showCustomForm = false;
   document.getElementById('searchInput').value = '';
   buildSelectionScreen();
   showScreen('screen-selection');
@@ -525,6 +563,7 @@ function buildSelectionScreen(){
   });
 
   renderSiteSection(container);
+  renderCustomSection(container);
   updateFooter();
 }
 
@@ -563,6 +602,82 @@ function renderSiteSection(container){
   };
   container.appendChild(h);
   container.appendChild(body);
+}
+
+function renderCustomSection(container){
+  var st = document.createElement('div');
+  st.className = 'section-title';
+  st.textContent = "Pieces hors catalogue";
+  container.appendChild(st);
+  var sub = document.createElement('div');
+  sub.className = 'section-sub';
+  sub.textContent = 'Pour une piece introuvable dans les listes ci-dessus';
+  container.appendChild(sub);
+
+  state.customItems.forEach(function(it, idx){
+    var row = document.createElement('div');
+    row.className = 'custom-row';
+    var priceText = formatPrix(it.prix);
+    row.innerHTML =
+      '<div class="part-info">' +
+        '<div class="name">' + it.designation + ' (x' + it.qty + ')' + '</div>' +
+        '<div class="ref">' + (it.reference ? 'Ref ' + it.reference + ' - ' : '') + (priceText || 'Prix non renseigne') + '</div>' +
+      '</div>' +
+      '<button class="custom-remove">&#10005;</button>';
+    row.querySelector('.custom-remove').onclick = function(){
+      state.customItems.splice(idx, 1);
+      buildSelectionScreen();
+    };
+    container.appendChild(row);
+  });
+
+  if(state.showCustomForm){
+    var form = document.createElement('div');
+    form.className = 'custom-form';
+    form.innerHTML =
+      '<input type="text" id="customDesig" placeholder="Nom de la piece">' +
+      '<div class="row2">' +
+        '<input type="text" id="customRef" placeholder="Reference (optionnel)">' +
+        '<input type="number" id="customPrix" placeholder="Prix unitaire (optionnel)" min="0" step="0.01">' +
+      '</div>' +
+      '<input type="number" id="customQty" placeholder="Quantite" min="1" value="' + (state.nbRobots || 1) + '">' +
+      '<div class="custom-form-actions">' +
+        '<button class="cancel">Annuler</button>' +
+        '<button class="confirm">Ajouter</button>' +
+      '</div>';
+    form.querySelector('.cancel').onclick = function(){
+      state.showCustomForm = false;
+      buildSelectionScreen();
+    };
+    form.querySelector('.confirm').onclick = function(){
+      var desig = document.getElementById('customDesig').value.trim();
+      if(!desig){
+        toast('Merci de saisir un nom de piece.');
+        return;
+      }
+      var ref = document.getElementById('customRef').value.trim();
+      var prixVal = document.getElementById('customPrix').value;
+      var qtyVal = parseInt(document.getElementById('customQty').value, 10);
+      state.customItems.push({
+        designation: desig,
+        reference: ref,
+        prix: prixVal ? parseFloat(prixVal) : null,
+        qty: (qtyVal && qtyVal > 0) ? qtyVal : 1
+      });
+      state.showCustomForm = false;
+      buildSelectionScreen();
+    };
+    container.appendChild(form);
+  } else {
+    var addBtn = document.createElement('button');
+    addBtn.className = 'custom-add-btn';
+    addBtn.textContent = '+ Ajouter une piece';
+    addBtn.onclick = function(){
+      state.showCustomForm = true;
+      buildSelectionScreen();
+    };
+    container.appendChild(addBtn);
+  }
 }
 
 function formatPrix(prix){
@@ -631,6 +746,10 @@ function computeTotals(){
       totalQty += q;
       if(it.prix) totalPrix += q * parseFloat(it.prix);
     }
+  });
+  state.customItems.forEach(function(it){
+    totalQty += it.qty;
+    if(it.prix) totalPrix += it.qty * parseFloat(it.prix);
   });
   return { totalQty: totalQty, totalPrix: totalPrix };
 }
@@ -711,6 +830,26 @@ function buildRecapScreen(){
 
   renderGroup('Pieces (x' + state.nbRobots + ' robots)', state.coches);
   renderGroup('Equipements communs', state.cochesSite);
+
+  if(state.customItems.length > 0){
+    anyItem = true;
+    var t3 = document.createElement('div');
+    t3.className = 'recap-fam';
+    t3.textContent = 'Pieces hors catalogue';
+    c.appendChild(t3);
+    mailLines.push('Pieces hors catalogue :');
+    state.customItems.forEach(function(it){
+      var ligneTotal = it.prix ? it.qty * parseFloat(it.prix) : null;
+      if(ligneTotal) totalGeneral += ligneTotal;
+      var priceText = ligneTotal ? formatPrix(ligneTotal) : 'a definir';
+      var d = document.createElement('div');
+      d.className = 'recap-item';
+      d.innerHTML = '<span>' + it.designation + ' (x' + it.qty + ')' + (it.reference ? ' - Ref ' + it.reference : '') + '</span><span class="rp">' + priceText + '</span>';
+      c.appendChild(d);
+      mailLines.push('- ' + it.designation + ' x' + it.qty + (it.reference ? ' (ref ' + it.reference + ')' : '') + ' : ' + priceText);
+    });
+    mailLines.push('');
+  }
 
   if(!anyItem){
     var empty = document.createElement('div');
