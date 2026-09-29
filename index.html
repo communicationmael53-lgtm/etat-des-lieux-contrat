@@ -668,7 +668,10 @@ function buildRecapScreen(){
 
   var anyItem = false;
   var mailLines = [];
-  mailLines.push('Etat des lieux pieces - ' + state.client);
+  mailLines.push('Bonjour Gregoire,');
+  mailLines.push('');
+  mailLines.push('Voici l\'etat des lieux des pieces a prevoir pour le futur contrat de maintenance de ' + state.client + '.');
+  mailLines.push('');
   mailLines.push('Technicien : ' + state.technicien);
   mailLines.push('Modele : ' + state.robot + ' (x' + state.nbRobots + ' robots)');
   mailLines.push('Date : ' + new Date().toLocaleDateString('fr-FR'));
@@ -722,6 +725,10 @@ function buildRecapScreen(){
     mailLines.push('Total estime : ' + formatPrix(totalGeneral));
     mailLines.push('(hors pieces sans prix identifie, a completer manuellement)');
   }
+
+  mailLines.push('');
+  mailLines.push('Cordialement,');
+  mailLines.push(state.technicien);
 
   var mailBody = mailLines.join('\n');
 
