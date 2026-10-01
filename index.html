@@ -968,11 +968,6 @@ function buildRecapScreen(){
     clearProgress();
   };
   c.appendChild(sendBtn);
-
-  var hint = document.createElement('div');
-  hint.className = 'hint';
-  hint.textContent = "Demo : ouvre votre application mail avec le rapport pre-rempli. En production, ceci serait automatise (generation PDF + envoi direct, sans passer par la messagerie du technicien).";
-  c.appendChild(hint);
 }
 
 loadCatalogue().then(function(data){
