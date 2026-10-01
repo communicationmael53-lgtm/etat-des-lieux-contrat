@@ -75,6 +75,19 @@
     display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;flex-shrink:0;
   }
 
+  .resume-banner{
+    background:var(--blue-deep); border-radius:16px; padding:14px 16px; margin-bottom:20px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .resume-title{font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; color:#fff;}
+  .resume-sub{font-size:12px; color:#CFE2F0; margin-top:3px;}
+  .resume-actions{display:flex; gap:8px;}
+  .resume-btn{
+    flex:1; border:none; border-radius:12px; padding:10px; font-family:'Poppins',sans-serif;
+    font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .resume-restart{background:rgba(255,255,255,0.15); color:#fff;}
+  .resume-continue{background:#fff; color:var(--blue-deep);}
   .field{margin-bottom:20px;}
   .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:8px; font-weight:500;}
   input[type="text"]{
@@ -287,6 +300,16 @@
       <div class="change-link" id="changeTechLink">Ce n'est pas moi</div>
     </div>
     <div class="body-pad">
+      <div class="resume-banner" id="resumeBanner" style="display:none;">
+        <div class="resume-text">
+          <div class="resume-title">État des lieux en cours</div>
+          <div class="resume-sub" id="resumeSub"></div>
+        </div>
+        <div class="resume-actions">
+          <button class="resume-btn resume-restart" id="btnResumeDiscard">Recommencer</button>
+          <button class="resume-btn resume-continue" id="btnResumeContinue">Reprendre</button>
+        </div>
+      </div>
       <div class="field">
         <label>Client</label>
         <input type="text" id="clientInput" placeholder="Nom de l'exploitation">
@@ -428,8 +451,69 @@ document.getElementById('changeTechLink').onclick = function(){
   showScreen('screen-tech');
 };
 
+var PROGRESS_KEY = 'moes_progress';
+
+function saveProgress(){
+  try{
+    var data = {
+      client: state.client,
+      robot: state.robot,
+      nbRobots: state.nbRobots,
+      coches: state.coches,
+      cochesSite: state.cochesSite,
+      customItems: state.customItems,
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(data));
+  }catch(e){}
+}
+
+function loadProgress(){
+  try{
+    var raw = localStorage.getItem(PROGRESS_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
+function clearProgress(){
+  try{ localStorage.removeItem(PROGRESS_KEY); }catch(e){}
+}
+
+function checkResumeBanner(){
+  var banner = document.getElementById('resumeBanner');
+  var saved = loadProgress();
+  if(!saved || !saved.client){
+    banner.style.display = 'none';
+    return;
+  }
+  var d = new Date(saved.savedAt);
+  var dateLabel = d.toLocaleDateString('fr-FR') + ' a ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('resumeSub').textContent = saved.client + ' - ' + (saved.robot || '') + ' - ' + dateLabel;
+  banner.style.display = 'flex';
+
+  document.getElementById('btnResumeDiscard').onclick = function(){
+    clearProgress();
+    banner.style.display = 'none';
+  };
+  document.getElementById('btnResumeContinue').onclick = function(){
+    state.client = saved.client;
+    state.robot = saved.robot;
+    state.nbRobots = saved.nbRobots;
+    state.coches = saved.coches || {};
+    state.cochesSite = saved.cochesSite || {};
+    state.customItems = saved.customItems || [];
+    state.familyOpen = {};
+    state.searchQuery = '';
+    document.getElementById('clientInput').value = saved.client;
+    buildSelectionScreen();
+    showScreen('screen-selection');
+  };
+}
+
 function goToAccueil(){
   document.getElementById('greetText').textContent = 'Bonjour ' + state.technicien.split(' ')[0] + ', ravi de vous revoir !';
+  checkResumeBanner();
   showScreen('screen-accueil');
 }
 
@@ -759,6 +843,7 @@ function updateFooter(){
   var label = t.totalQty + (t.totalQty > 1 ? ' pieces' : ' piece');
   var priceLabel = formatPrix(t.totalPrix);
   document.getElementById('footerSummary').textContent = label + (priceLabel ? ' - ' + priceLabel : '');
+  saveProgress();
 }
 
 document.getElementById('btnEnvoyer').onclick = function(){
@@ -880,6 +965,7 @@ function buildRecapScreen(){
     var body = encodeURIComponent(mailBody);
     window.location.href = 'mailto:gregoire.gougeon@elevageservice.net?subject=' + subject + '&body=' + body;
     toast('Ouverture de votre messagerie...');
+    clearProgress();
   };
   c.appendChild(sendBtn);
 
