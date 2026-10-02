@@ -401,7 +401,6 @@ const state = {
   robot: null,          // "V300" ou "V Classic" - choix unique
   nbRobots: null,
   coches: {},            // { designation: quantite }
-  cochesSite: {},         // { designation: quantite }
   familyOpen: {},
   searchQuery: '',
   customItems: [],        // [{ designation, reference, prix, qty }]
@@ -460,7 +459,6 @@ function saveProgress(){
       robot: state.robot,
       nbRobots: state.nbRobots,
       coches: state.coches,
-      cochesSite: state.cochesSite,
       customItems: state.customItems,
       savedAt: new Date().toISOString()
     };
@@ -501,7 +499,6 @@ function checkResumeBanner(){
     state.robot = saved.robot;
     state.nbRobots = saved.nbRobots;
     state.coches = saved.coches || {};
-    state.cochesSite = saved.cochesSite || {};
     state.customItems = saved.customItems || [];
     state.familyOpen = {};
     state.searchQuery = '';
@@ -520,7 +517,6 @@ function goToAccueil(){
 function totalCoche(){
   var total = 0;
   Object.keys(state.coches).forEach(function(k){ total += state.coches[k]; });
-  Object.keys(state.cochesSite).forEach(function(k){ total += state.cochesSite[k]; });
   state.customItems.forEach(function(it){ total += it.qty; });
   return total;
 }
@@ -571,7 +567,6 @@ document.getElementById('btnCommencer').onclick = function(){
   err.style.display = 'none';
   state.client = client;
   state.coches = {};
-  state.cochesSite = {};
   state.familyOpen = {};
   state.searchQuery = '';
   state.customItems = [];
@@ -581,6 +576,11 @@ document.getElementById('btnCommencer').onclick = function(){
   showScreen('screen-selection');
 };
 
+function defaultQtyFor(it){
+  if(it.portee === 'site') return 1;
+  return state.nbRobots * (it.multiplicateur || 1);
+}
+
 function buildSelectionScreen(){
   document.getElementById('clientNameHeader').textContent = state.client.toUpperCase();
 
@@ -588,10 +588,7 @@ function buildSelectionScreen(){
   container.innerHTML = '';
 
   var robotItems = CATALOGUE.filter(function(it){
-    return it.portee === 'robot' && (it.robot === 'Commun' || it.robot === state.robot);
-  });
-  var siteItemsAll = CATALOGUE.filter(function(it){
-    return it.portee === 'site' && (it.robot === 'Commun' || it.robot === state.robot);
+    return it.robot === 'Commun' || it.robot === state.robot;
   });
 
   var q = normalizeSearch(state.searchQuery);
@@ -601,18 +598,12 @@ function buildSelectionScreen(){
     var matches = robotItems.filter(function(it){
       return normalizeSearch(it.designation).indexOf(q) !== -1 || normalizeSearch(it.famille).indexOf(q) !== -1;
     });
-    var matchesSite = siteItemsAll.filter(function(it){
-      return normalizeSearch(it.designation).indexOf(q) !== -1 || normalizeSearch(it.famille).indexOf(q) !== -1;
-    });
     var hint = document.createElement('div');
     hint.className = 'search-results-hint';
-    hint.textContent = (matches.length + matchesSite.length) + ' resultat(s)';
+    hint.textContent = matches.length + ' resultat(s)';
     container.appendChild(hint);
     matches.forEach(function(it){
-      container.appendChild(renderPartRow(it, state.coches, state.nbRobots * (it.multiplicateur || 1)));
-    });
-    matchesSite.forEach(function(it){
-      container.appendChild(renderPartRow(it, state.cochesSite, 1));
+      container.appendChild(renderPartRow(it, state.coches, defaultQtyFor(it)));
     });
     updateFooter();
     return;
@@ -636,7 +627,7 @@ function buildSelectionScreen(){
     var body = document.createElement('div');
     body.className = 'fam-body' + (state.familyOpen[f] ? ' open' : '');
     itemsInFam.forEach(function(it){
-      body.appendChild(renderPartRow(it, state.coches, state.nbRobots * (it.multiplicateur || 1)));
+      body.appendChild(renderPartRow(it, state.coches, defaultQtyFor(it)));
     });
     h.onclick = function(){
       state.familyOpen[f] = !state.familyOpen[f];
@@ -646,46 +637,8 @@ function buildSelectionScreen(){
     container.appendChild(body);
   });
 
-  renderSiteSection(container);
   renderCustomSection(container);
   updateFooter();
-}
-
-function renderSiteSection(container){
-  var siteItems = CATALOGUE.filter(function(it){
-    return it.portee === 'site' && (it.robot === 'Commun' || it.robot === state.robot);
-  });
-  if(siteItems.length === 0) return;
-
-  var st = document.createElement('div');
-  st.className = 'section-title';
-  st.textContent = "Equipements communs a l'exploitation";
-  container.appendChild(st);
-  var sub = document.createElement('div');
-  sub.className = 'section-sub';
-  sub.textContent = 'Une seule case suffit, quantite independante du nombre de robots';
-  container.appendChild(sub);
-
-  var key = 'SITE';
-  if(!(key in state.familyOpen)) state.familyOpen[key] = true;
-  var nbChecked = siteItems.filter(function(it){ return state.cochesSite.hasOwnProperty(it.designation); }).length;
-
-  var h = document.createElement('div');
-  h.className = 'fam-header' + (state.familyOpen[key] ? ' open' : '');
-  h.innerHTML = '<div class="dot"></div><div class="name">Voir la liste</div>' +
-    (nbChecked > 0 ? '<div class="badge">' + nbChecked + '</div>' : '') +
-    '<div class="chevron">&#9660;</div>';
-  var body = document.createElement('div');
-  body.className = 'fam-body' + (state.familyOpen[key] ? ' open' : '');
-  siteItems.forEach(function(it){
-    body.appendChild(renderPartRow(it, state.cochesSite, 1));
-  });
-  h.onclick = function(){
-    state.familyOpen[key] = !state.familyOpen[key];
-    buildSelectionScreen();
-  };
-  container.appendChild(h);
-  container.appendChild(body);
 }
 
 function renderCustomSection(container){
@@ -824,8 +777,7 @@ function renderPartRow(item, quantMap, defaultQty){
 function computeTotals(){
   var totalQty = 0, totalPrix = 0;
   CATALOGUE.forEach(function(it){
-    var map = it.portee === 'site' ? state.cochesSite : state.coches;
-    var q = map[it.designation];
+    var q = state.coches[it.designation];
     if(q){
       totalQty += q;
       if(it.prix) totalPrix += q * parseFloat(it.prix);
@@ -913,8 +865,7 @@ function buildRecapScreen(){
     mailLines.push('');
   }
 
-  renderGroup('Pieces (x' + state.nbRobots + ' robots)', state.coches);
-  renderGroup('Equipements communs', state.cochesSite);
+  renderGroup('Pieces', state.coches);
 
   if(state.customItems.length > 0){
     anyItem = true;
