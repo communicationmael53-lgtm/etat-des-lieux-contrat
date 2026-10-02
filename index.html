@@ -353,7 +353,7 @@
       <h1 style="font-size:18px;">Sélection des pièces</h1>
     </div>
     <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Rechercher une piece...">
+      <input type="text" id="searchInput" placeholder="Rechercher une pièce...">
       <span class="search-clear" id="searchClear" style="display:none;">&#10005;</span>
     </div>
     <div class="body-pad" style="padding-top:2px;" id="partsListContainer"></div>
@@ -424,6 +424,17 @@ function normalizeSearch(s){
 }
 
 const TECHNICIENS = ["Philippe DE KERDANET", "Jean-François COULON", "Aurélien BARRE", "Antoine DUPONT", "Antoine JARRY", "Matthieu LOCHU", "Maxime ROMAGNE", "Florian BETTON"];
+
+const TECHNICIEN_EMAILS = {
+  "Philippe DE KERDANET": "philippe.dekerdanet@elevageservice.net",
+  "Jean-François COULON": "jean-francois.coulon@elevageservice.net",
+  "Aurélien BARRE": "aurelien.barre@elevageservice.net",
+  "Antoine DUPONT": "antoine.dupont@elevageservice.net",
+  "Antoine JARRY": "antoine.jarry@elevageservice.net",
+  "Matthieu LOCHU": "matthieu.lochu@elevageservice.net",
+  "Maxime ROMAGNE": "maxime.romagne@elevageservice.net",
+  "Florian BETTON": "florian.betton@elevageservice.net"
+};
 
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
@@ -497,7 +508,7 @@ function checkResumeBanner(){
     return;
   }
   var d = new Date(saved.savedAt);
-  var dateLabel = d.toLocaleDateString('fr-FR') + ' a ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+  var dateLabel = d.toLocaleDateString('fr-FR') + ' à ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
   document.getElementById('resumeSub').textContent = saved.client + ' - ' + (saved.robot || '') + ' - ' + dateLabel;
   banner.style.display = 'flex';
 
@@ -534,7 +545,7 @@ function totalCoche(){
 
 function goHomeWithConfirm(){
   if(totalCoche() > 0){
-    var ok = confirm("Des pieces sont deja cochees. Revenir a l'accueil et relancer la selection effacera ces coches. Continuer ?");
+    var ok = confirm("Des pièces sont déjà cochées. Revenir à l'accueil et relancer la sélection effacera ces coches. Continuer ?");
     if(!ok) return;
   }
   showScreen('screen-accueil');
@@ -612,7 +623,7 @@ function buildSelectionScreen(){
     });
     var hint = document.createElement('div');
     hint.className = 'search-results-hint';
-    hint.textContent = matches.length + ' resultat(s)';
+    hint.textContent = matches.length + ' résultat(s)';
     container.appendChild(hint);
     matches.forEach(function(it){
       container.appendChild(renderPartRow(it, state.coches, defaultQtyFor(it)));
@@ -656,11 +667,11 @@ function buildSelectionScreen(){
 function renderCustomSection(container){
   var st = document.createElement('div');
   st.className = 'section-title';
-  st.textContent = "Pieces hors catalogue";
+  st.textContent = "Pièces hors catalogue";
   container.appendChild(st);
   var sub = document.createElement('div');
   sub.className = 'section-sub';
-  sub.textContent = 'Pour une piece introuvable dans les listes ci-dessus';
+  sub.textContent = 'Pour une pièce introuvable dans les listes ci-dessus';
   container.appendChild(sub);
 
   state.customItems.forEach(function(it, idx){
@@ -670,7 +681,7 @@ function renderCustomSection(container){
     row.innerHTML =
       '<div class="part-info">' +
         '<div class="name">' + it.designation + ' (x' + it.qty + ')' + '</div>' +
-        '<div class="ref">' + (it.reference ? 'Ref ' + it.reference + ' - ' : '') + (priceText || 'Prix non renseigne') + '</div>' +
+        '<div class="ref">' + (it.reference ? 'Ref ' + it.reference + ' - ' : '') + (priceText || 'Prix non renseigné') + '</div>' +
       '</div>' +
       '<button class="custom-remove">&#10005;</button>';
     row.querySelector('.custom-remove').onclick = function(){
@@ -684,12 +695,12 @@ function renderCustomSection(container){
     var form = document.createElement('div');
     form.className = 'custom-form';
     form.innerHTML =
-      '<input type="text" id="customDesig" placeholder="Nom de la piece">' +
+      '<input type="text" id="customDesig" placeholder="Nom de la pièce">' +
       '<div class="row2">' +
-        '<input type="text" id="customRef" placeholder="Reference (optionnel)">' +
+        '<input type="text" id="customRef" placeholder="Référence (optionnel)">' +
         '<input type="number" id="customPrix" placeholder="Prix unitaire (optionnel)" min="0" step="0.01">' +
       '</div>' +
-      '<input type="number" id="customQty" placeholder="Quantite" min="1" value="' + (state.nbRobots || 1) + '">' +
+      '<input type="number" id="customQty" placeholder="Quantité" min="1" value="' + (state.nbRobots || 1) + '">' +
       '<div class="custom-form-actions">' +
         '<button class="cancel">Annuler</button>' +
         '<button class="confirm">Ajouter</button>' +
@@ -701,7 +712,7 @@ function renderCustomSection(container){
     form.querySelector('.confirm').onclick = function(){
       var desig = document.getElementById('customDesig').value.trim();
       if(!desig){
-        toast('Merci de saisir un nom de piece.');
+        toast('Merci de saisir un nom de pièce.');
         return;
       }
       var ref = document.getElementById('customRef').value.trim();
@@ -720,7 +731,7 @@ function renderCustomSection(container){
   } else {
     var addBtn = document.createElement('button');
     addBtn.className = 'custom-add-btn';
-    addBtn.textContent = '+ Ajouter une piece';
+    addBtn.textContent = '+ Ajouter une pièce';
     addBtn.onclick = function(){
       state.showCustomForm = true;
       buildSelectionScreen();
@@ -752,7 +763,7 @@ function renderPartRow(item, quantMap, defaultQty){
       '<div class="name">' + item.designation + '</div>' +
     '</div>' +
     '<div class="info-btn' + (infoIsOpen ? ' active' : '') + '">i</div>' +
-    '<div class="part-price' + (priceText ? '' : ' missing') + '">' + (priceText || 'A definir') + '</div>';
+    '<div class="part-price' + (priceText ? '' : ' missing') + '">' + (priceText || 'À définir') + '</div>';
   top.querySelector('.info-btn').onclick = function(evt){
     evt.stopPropagation();
     state.infoOpen[infoKey] = !infoIsOpen;
@@ -771,7 +782,7 @@ function renderPartRow(item, quantMap, defaultQty){
   if(infoIsOpen){
     var refLine = document.createElement('div');
     refLine.className = 'part-ref-reveal';
-    refLine.textContent = item.reference ? ('Reference : ' + item.reference) : 'Reference non renseignee';
+    refLine.textContent = item.reference ? ('Référence : ' + item.reference) : 'Référence non renseignée';
     row.appendChild(refLine);
   }
 
@@ -819,7 +830,7 @@ function computeTotals(){
 
 function updateFooter(){
   var t = computeTotals();
-  var label = t.totalQty + (t.totalQty > 1 ? ' pieces' : ' piece');
+  var label = t.totalQty + (t.totalQty > 1 ? ' pièces' : ' pièce');
   var priceLabel = formatPrix(t.totalPrix);
   document.getElementById('footerSummary').textContent = label + (priceLabel ? ' - ' + priceLabel : '');
   saveProgress();
@@ -844,19 +855,19 @@ function buildRecapScreen(){
   infoBlock.innerHTML =
     '<div class="row"><span>Client</span><span>' + state.client + '</span></div>' +
     '<div class="row"><span>Technicien</span><span>' + state.technicien + '</span></div>' +
-    '<div class="row"><span>Modele</span><span>' + state.robot + '</span></div>' +
+    '<div class="row"><span>Modèle</span><span>' + state.robot + '</span></div>' +
     '<div class="row"><span>Nombre de robots</span><span>' + state.nbRobots + '</span></div>' +
     '<div class="row"><span>Date</span><span>' + new Date().toLocaleDateString('fr-FR') + '</span></div>';
   c.appendChild(infoBlock);
 
   var anyItem = false;
   var mailLines = [];
-  mailLines.push('Bonjour Gregoire,');
+  mailLines.push('Bonjour Grégoire,');
   mailLines.push('');
-  mailLines.push('Voici l\'etat des lieux des pieces a prevoir pour le futur contrat de maintenance de ' + state.client + '.');
+  mailLines.push('Voici l\'état des lieux des pièces à prévoir pour le futur contrat de maintenance de ' + state.client + '.');
   mailLines.push('');
   mailLines.push('Technicien : ' + state.technicien);
-  mailLines.push('Modele : ' + state.robot + ' (x' + state.nbRobots + ' robots)');
+  mailLines.push('Modèle : ' + state.robot + ' (x' + state.nbRobots + ' robots)');
   mailLines.push('Date : ' + new Date().toLocaleDateString('fr-FR'));
   mailLines.push('');
 
@@ -881,7 +892,7 @@ function buildRecapScreen(){
       var prixUnit = found ? found.prix : null;
       var ligneTotal = prixUnit ? qty * parseFloat(prixUnit) : null;
       if(ligneTotal) totalGeneral += ligneTotal;
-      var priceText = ligneTotal ? formatPrix(ligneTotal) : 'a definir';
+      var priceText = ligneTotal ? formatPrix(ligneTotal) : 'à définir';
 
       var d = document.createElement('div');
       d.className = 'recap-item';
@@ -892,19 +903,19 @@ function buildRecapScreen(){
     mailLines.push('');
   }
 
-  renderGroup('Pieces', state.coches);
+  renderGroup('Pièces', state.coches);
 
   if(state.customItems.length > 0){
     anyItem = true;
     var t3 = document.createElement('div');
     t3.className = 'recap-fam';
-    t3.textContent = 'Pieces hors catalogue';
+    t3.textContent = 'Pièces hors catalogue';
     c.appendChild(t3);
-    mailLines.push('Pieces hors catalogue :');
+    mailLines.push('Pièces hors catalogue :');
     state.customItems.forEach(function(it){
       var ligneTotal = it.prix ? it.qty * parseFloat(it.prix) : null;
       if(ligneTotal) totalGeneral += ligneTotal;
-      var priceText = ligneTotal ? formatPrix(ligneTotal) : 'a definir';
+      var priceText = ligneTotal ? formatPrix(ligneTotal) : 'à définir';
       var d = document.createElement('div');
       d.className = 'recap-item';
       d.innerHTML = '<span>' + it.designation + ' (x' + it.qty + ')' + (it.reference ? ' - Ref ' + it.reference : '') + '</span><span class="rp">' + priceText + '</span>';
@@ -917,15 +928,15 @@ function buildRecapScreen(){
   if(!anyItem){
     var empty = document.createElement('div');
     empty.className = 'hint';
-    empty.textContent = 'Aucune piece cochee pour le moment.';
+    empty.textContent = 'Aucune pièce cochée pour le moment.';
     c.appendChild(empty);
   } else {
     var totalRow = document.createElement('div');
     totalRow.className = 'recap-total';
-    totalRow.innerHTML = '<span>Total estime</span><span>' + formatPrix(totalGeneral) + '</span>';
+    totalRow.innerHTML = '<span>Total estimé</span><span>' + formatPrix(totalGeneral) + '</span>';
     c.appendChild(totalRow);
-    mailLines.push('Total estime : ' + formatPrix(totalGeneral));
-    mailLines.push('(hors pieces sans prix identifie, a completer manuellement)');
+    mailLines.push('Total estimé : ' + formatPrix(totalGeneral));
+    mailLines.push('(hors pièces sans prix identifié, à compléter manuellement)');
   }
 
   mailLines.push('');
@@ -939,9 +950,11 @@ function buildRecapScreen(){
   sendBtn.style.marginTop = '20px';
   sendBtn.textContent = 'Envoyer par e-mail au charge de clientele';
   sendBtn.onclick = function(){
-    var subject = encodeURIComponent('Etat des lieux pieces - ' + state.client);
+    var subject = encodeURIComponent('État des lieux pièces - ' + state.client);
     var body = encodeURIComponent(mailBody);
-    window.location.href = 'mailto:gregoire.gougeon@elevageservice.net?subject=' + subject + '&body=' + body;
+    var ccEmail = TECHNICIEN_EMAILS[state.technicien];
+    var ccParam = ccEmail ? '&cc=' + encodeURIComponent(ccEmail) : '';
+    window.location.href = 'mailto:gregoire.gougeon@elevageservice.net?subject=' + subject + ccParam + '&body=' + body;
     toast('Ouverture de votre messagerie...');
     clearProgress();
   };
