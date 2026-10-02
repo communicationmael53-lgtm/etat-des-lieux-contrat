@@ -207,6 +207,16 @@
     flex-shrink:0; text-align:right; white-space:nowrap; padding-top:1px;
   }
   .part-price.missing{color:#B23A3A; font-style:italic; font-weight:400; font-size:10.5px; white-space:normal; max-width:70px; text-align:right;}
+  .info-btn{
+    width:20px; height:20px; border-radius:50%; border:1.5px solid #B7C4CE; background:#fff;
+    color:var(--blue); font-size:11px; font-weight:700; font-style:italic; font-family:'IBM Plex Mono', monospace;
+    flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:1px;
+  }
+  .info-btn.active{background:var(--blue); border-color:var(--blue); color:#fff;}
+  .part-ref-reveal{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted);
+    margin-top:4px; padding-left:32px;
+  }
   .qty-stepper-row{display:flex; justify-content:flex-end; width:100%; margin-top:10px; box-sizing:border-box;}
   .qty-stepper{
     display:flex; align-items:center; background:#fff; border:1px solid var(--green);
@@ -403,6 +413,7 @@ const state = {
   coches: {},            // { designation: quantite }
   familyOpen: {},
   searchQuery: '',
+  infoOpen: {},
   customItems: [],        // [{ designation, reference, prix, qty }]
   showCustomForm: false
 };
@@ -571,6 +582,7 @@ document.getElementById('btnCommencer').onclick = function(){
   state.searchQuery = '';
   state.customItems = [];
   state.showCustomForm = false;
+  state.infoOpen = {};
   document.getElementById('searchInput').value = '';
   buildSelectionScreen();
   showScreen('screen-selection');
@@ -728,6 +740,8 @@ function renderPartRow(item, quantMap, defaultQty){
   var row = document.createElement('div');
   var isChecked = quantMap.hasOwnProperty(item.designation);
   var priceText = formatPrix(item.prix);
+  var infoKey = item.designation + '|' + item.robot;
+  var infoIsOpen = !!state.infoOpen[infoKey];
   row.className = 'part-row' + (isChecked ? ' checked' : '');
 
   var top = document.createElement('div');
@@ -737,7 +751,13 @@ function renderPartRow(item, quantMap, defaultQty){
     '<div class="part-info">' +
       '<div class="name">' + item.designation + '</div>' +
     '</div>' +
+    '<div class="info-btn' + (infoIsOpen ? ' active' : '') + '">i</div>' +
     '<div class="part-price' + (priceText ? '' : ' missing') + '">' + (priceText || 'A definir') + '</div>';
+  top.querySelector('.info-btn').onclick = function(evt){
+    evt.stopPropagation();
+    state.infoOpen[infoKey] = !infoIsOpen;
+    buildSelectionScreen();
+  };
   top.onclick = function(){
     if(quantMap.hasOwnProperty(item.designation)){
       delete quantMap[item.designation];
@@ -747,6 +767,13 @@ function renderPartRow(item, quantMap, defaultQty){
     buildSelectionScreen();
   };
   row.appendChild(top);
+
+  if(infoIsOpen){
+    var refLine = document.createElement('div');
+    refLine.className = 'part-ref-reveal';
+    refLine.textContent = item.reference ? ('Reference : ' + item.reference) : 'Reference non renseignee';
+    row.appendChild(refLine);
+  }
 
   if(isChecked){
     var stepperRow = document.createElement('div');
