@@ -286,6 +286,67 @@
     font-size:13px; color:var(--blue); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;
     padding:14px 20px 0;
   }
+
+  /* ================= MISE EN PAGE ORDINATEUR (écrans larges uniquement) ================= */
+  @media (min-width: 900px){
+    body{padding:24px 24px 0;}
+    #app{
+      max-width:1180px; margin:0 auto; min-height:calc(100vh - 24px);
+      border-radius:24px 24px 0 0; box-shadow:0 20px 50px rgba(10,58,92,0.12);
+    }
+    .screen{min-height:calc(100vh - 24px);}
+    .appbar{padding:28px 40px 30px; border-radius:24px;}
+    .appbar h1{font-size:28px;}
+    .appbar .greet{font-size:22px;}
+    .appbar .sub{font-size:14px;}
+    .logo-mark{width:38px; height:38px;}
+    .logo-word{font-size:14px;}
+    #screen-selection .appbar{padding:22px 40px 22px !important;}
+    #screen-selection .appbar h1{font-size:22px !important;}
+    #screen-recap .appbar h1{font-size:26px !important;}
+    .home-btn{top:26px; right:32px; width:42px; height:42px; font-size:18px; cursor:pointer;}
+
+    .body-pad{padding:32px 40px 100px;}
+    #screen-accueil .body-pad,
+    #screen-tech .body-pad,
+    #screen-recap .body-pad{max-width:720px; width:100%; margin:0 auto;}
+    #screen-recap .back-link{align-self:center; width:100%; max-width:720px; padding:24px 40px 0;}
+
+    .tech-pick{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+    .toggle-btn{padding:14px 12px; font-size:14px;}
+
+    .search-bar{padding:22px 0 8px; margin:0 40px; max-width:560px;}
+    .search-clear{right:14px;}
+    #partsListContainer{padding-left:24px; padding-right:24px;}
+
+    .fam-header{margin:14px 16px 0; padding:16px 20px;}
+    .fam-header .name{font-size:15.5px;}
+    .fam-body{margin:0 16px 14px; padding:8px 8px 6px;}
+    .fam-body.open{display:grid; grid-template-columns:1fr 1fr; gap:0 6px; align-items:stretch;}
+    .fam-body .part-row{margin:6px;}
+    .search-grid{display:grid; grid-template-columns:1fr 1fr; gap:0 6px; align-items:stretch;}
+    .search-grid .part-row{margin:6px 10px;}
+    .part-info .name{font-size:14.5px;}
+
+    .section-title{padding:22px 16px 4px;}
+    .section-sub{padding:0 16px 4px;}
+    .custom-row{margin:6px 16px;}
+    .custom-form{max-width:560px; margin:10px 16px;}
+    .custom-add-btn{width:420px; max-width:calc(100% - 32px); margin:10px 16px;}
+
+    .footer-bar{margin:12px 24px 20px; padding:16px 22px;}
+    .footer-bar .summary b{font-size:17px;}
+    .footer-bar .send{padding:12px 30px; font-size:14.5px; cursor:pointer;}
+    .btn-primary{cursor:pointer;}
+  }
+  @media (min-width: 900px) and (hover: hover){
+    .part-row:hover{border-color:#9FBCD3;}
+    .part-row.checked:hover{border-color:#9CC792;}
+    .fam-header:hover{background:#DFEBF4;}
+    .toggle-btn:not(:disabled):not(.active):hover{background:#DCE9F2;}
+    .btn-primary:hover{background:var(--blue);}
+    .footer-bar .send:hover{background:#EAF3FA;}
+  }
 </style>
 </head>
 <body>
@@ -299,7 +360,7 @@
     </div>
     <div class="body-pad">
       <div class="tech-pick" id="techPickList"></div>
-      <div class="hint">Ce choix n'est demandé qu'une fois — l'application reconnaîtra ensuite automatiquement ce téléphone.</div>
+      <div class="hint">Ce choix n'est demandé qu'une fois — l'application reconnaîtra ensuite automatiquement cet appareil.</div>
     </div>
   </div>
 
@@ -625,9 +686,12 @@ function buildSelectionScreen(){
     hint.className = 'search-results-hint';
     hint.textContent = matches.length + ' résultat(s)';
     container.appendChild(hint);
+    var searchGrid = document.createElement('div');
+    searchGrid.className = 'search-grid';
     matches.forEach(function(it){
-      container.appendChild(renderPartRow(it, state.coches, defaultQtyFor(it)));
+      searchGrid.appendChild(renderPartRow(it, state.coches, defaultQtyFor(it)));
     });
+    container.appendChild(searchGrid);
     updateFooter();
     return;
   }
@@ -948,7 +1012,7 @@ function buildRecapScreen(){
   var sendBtn = document.createElement('button');
   sendBtn.className = 'btn-primary';
   sendBtn.style.marginTop = '20px';
-  sendBtn.textContent = 'Envoyer par e-mail au charge de clientele';
+  sendBtn.textContent = 'Envoyer par e-mail au chargé de clientèle';
   sendBtn.onclick = function(){
     var subject = encodeURIComponent('État des lieux pièces - ' + state.client);
     var body = encodeURIComponent(mailBody);
@@ -960,6 +1024,10 @@ function buildRecapScreen(){
   };
   c.appendChild(sendBtn);
 }
+
+document.getElementById('clientInput').onkeydown = function(e){
+  if(e.key === 'Enter'){ document.getElementById('btnCommencer').click(); }
+};
 
 loadCatalogue().then(function(data){
   CATALOGUE = data;
