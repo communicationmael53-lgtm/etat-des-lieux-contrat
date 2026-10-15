@@ -122,6 +122,7 @@
     font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; text-decoration:underline; cursor:pointer;
   }
   .desktop-only{display:none;}
+  .mobile-only{display:block;}
   .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:12px; line-height:1.5;}
   .err{font-size:12.5px; color:#B23A3A; margin-top:-8px; margin-bottom:14px; display:none;}
 
@@ -348,6 +349,7 @@
     .footer-bar .send{padding:12px 30px; font-size:14.5px; cursor:pointer;}
     .btn-primary{cursor:pointer;}
     .desktop-only{display:block;}
+    .mobile-only{display:none !important;}
   }
   @media (min-width: 900px) and (hover: hover){
     .part-row:hover{border-color:#9FBCD3;}
@@ -425,7 +427,7 @@
       <h1 style="font-size:18px;">Sélection des pièces</h1>
     </div>
     <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Rechercher une pièce...">
+      <input type="text" id="searchInput" placeholder="Rechercher une pièce ou une référence...">
       <span class="search-clear" id="searchClear" style="display:none;">&#10005;</span>
     </div>
     <div class="body-pad" style="padding-top:2px;" id="partsListContainer"></div>
@@ -514,11 +516,17 @@ function showScreen(id){
   window.scrollTo(0,0);
 }
 
-function toast(msg){
+var toastTimer = null;
+function toast(msg, ms){
   var t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, ms || 2200);
+}
+
+function openExternal(url){
+  window.location.href = url;
 }
 
 function initTechScreen(){
@@ -690,8 +698,9 @@ function buildSelectionScreen(){
   document.getElementById('searchClear').style.display = q ? 'block' : 'none';
 
   if(q){
+    var refMatches = function(it){ return normalizeSearch(it.reference).indexOf(q) !== -1; };
     var matches = robotItems.filter(function(it){
-      return normalizeSearch(it.designation).indexOf(q) !== -1 || normalizeSearch(it.famille).indexOf(q) !== -1;
+      return normalizeSearch(it.designation).indexOf(q) !== -1 || normalizeSearch(it.famille).indexOf(q) !== -1 || refMatches(it);
     });
     var hint = document.createElement('div');
     hint.className = 'search-results-hint';
@@ -700,7 +709,7 @@ function buildSelectionScreen(){
     var searchGrid = document.createElement('div');
     searchGrid.className = 'search-grid';
     matches.forEach(function(it){
-      searchGrid.appendChild(renderPartRow(it, state.coches, defaultQtyFor(it)));
+      searchGrid.appendChild(renderPartRow(it, state.coches, defaultQtyFor(it), refMatches(it)));
     });
     container.appendChild(searchGrid);
     updateFooter();
@@ -822,12 +831,12 @@ function formatPrix(prix){
   return n.toFixed(2).replace('.', ',') + ' \u20ac';
 }
 
-function renderPartRow(item, quantMap, defaultQty){
+function renderPartRow(item, quantMap, defaultQty, forceRef){
   var row = document.createElement('div');
   var isChecked = quantMap.hasOwnProperty(item.designation);
   var priceText = formatPrix(item.prix);
   var infoKey = item.designation + '|' + item.robot;
-  var infoIsOpen = !!state.infoOpen[infoKey];
+  var infoIsOpen = !!state.infoOpen[infoKey] || !!forceRef;
   row.className = 'part-row' + (isChecked ? ' checked' : '');
 
   var top = document.createElement('div');
@@ -1029,11 +1038,60 @@ function buildRecapScreen(){
     var body = encodeURIComponent(mailBody);
     var ccEmail = TECHNICIEN_EMAILS[state.technicien];
     var ccParam = ccEmail ? '&cc=' + encodeURIComponent(ccEmail) : '';
-    window.location.href = 'mailto:gregoire.gougeon@elevageservice.net?subject=' + subject + ccParam + '&body=' + body;
+    try{ localStorage.removeItem('moes_mail_pref'); }catch(e){}
+    openExternal('mailto:gregoire.gougeon@elevageservice.net?subject=' + subject + ccParam + '&body=' + body);
     toast('Ouverture de votre messagerie...');
     clearProgress();
   };
-  c.appendChild(sendBtn);
+
+  // --- Outlook mobile (application Outlook sur telephone) ---
+  var outlookMobileBtn = document.createElement('button');
+  outlookMobileBtn.className = 'btn-secondary mobile-only';
+  outlookMobileBtn.textContent = 'Ouvrir dans Outlook (mobile)';
+  outlookMobileBtn.onclick = function(){
+    var toEmail = 'gregoire.gougeon@elevageservice.net';
+    var ccEmail = TECHNICIEN_EMAILS[state.technicien];
+    var url = 'ms-outlook://compose?to=' + encodeURIComponent(toEmail) +
+      (ccEmail ? '&cc=' + encodeURIComponent(ccEmail) : '') +
+      '&subject=' + encodeURIComponent('État des lieux pièces - ' + state.client);
+    var bodyEnc = encodeURIComponent(mailBody);
+    var tropLong = (url.length + bodyEnc.length) > 7000;
+    if(!tropLong){ url += '&body=' + bodyEnc; }
+    copyText(mailBody);
+    // Si l'appli change vraiment (Outlook s'ouvre), la page passe en arriere-plan : on le detecte.
+    var switched = false;
+    var onVis = function(){ if(document.hidden){ switched = true; } };
+    document.addEventListener('visibilitychange', onVis);
+    openExternal(url);
+    toast(tropLong ? 'Rapport copié : collez-le dans le message' : "Ouverture d'Outlook...");
+    setTimeout(function(){
+      document.removeEventListener('visibilitychange', onVis);
+      if(switched){
+        try{ localStorage.setItem('moes_mail_pref', 'outlook'); }catch(e){}
+        clearProgress();
+      } else {
+        toast("Outlook ne s'est pas ouvert ? Le rapport est copié : collez-le dans un mail.", 6000);
+      }
+    }, 2000);
+  };
+
+  // Ordre des boutons sur telephone : Outlook en premier si ce telephone l'a deja utilise avec succes
+  var prefOutlook = false;
+  try{ prefOutlook = localStorage.getItem('moes_mail_pref') === 'outlook'; }catch(e){}
+  var isMobile = window.matchMedia('(max-width: 899px)').matches;
+  if(isMobile && prefOutlook){
+    outlookMobileBtn.className = 'btn-primary mobile-only';
+    outlookMobileBtn.style.marginTop = '20px';
+    outlookMobileBtn.textContent = 'Envoyer avec Outlook';
+    sendBtn.className = 'btn-secondary';
+    sendBtn.style.marginTop = '';
+    sendBtn.textContent = 'Utiliser une autre application mail';
+    c.appendChild(outlookMobileBtn);
+    c.appendChild(sendBtn);
+  } else {
+    c.appendChild(sendBtn);
+    c.appendChild(outlookMobileBtn);
+  }
 
   var outlookBtn = document.createElement('button');
   outlookBtn.className = 'btn-secondary desktop-only';
